@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egg Facts</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #afd696;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+        .egg {
+            width: 150px;
+            height: 200px;
+            background-color: #fff;
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            margin: 0 auto;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .egg:hover {
+            transform: scale(1.1);
+        }
+        .fact {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            width: 80%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .egg.active .fact {
+            display: block;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .nav {
+            margin-bottom: 30px;
+        }
+        .nav a {
+            text-decoration: none;
+            color: #333;
+            margin: 0 15px;
+            padding: 8px 15px;
+            border-radius: 5px;
+            background-color: #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .nav a:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <h1>Click on the Eggs to Discover Fun Facts!</h1>
+    <div class="container">
+        {% for fact in facts %}
+        <div class="egg" onclick="this.classList.toggle('active')">
+            <div class="fact">{{ fact }}</div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html> 
