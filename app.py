@@ -1,23 +1,19 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, g
 import os
 import ldclient
 from ldclient import Context
 from ldclient.config import Config
-from threading import Lock, Event
+import uuid
 
 app = Flask(__name__)
 
 from dotenv import load_dotenv
 load_dotenv()
 
-sdk_key = os.getenv("LAUNCHDARKLY_SDK_KEY")
+LAUNCHDARKLY_SDK_KEY = os.getenv("LAUNCHDARKLY_SDK_KEY")
 
-egg_info_flag_key = "tell-a-joke"
-
-def show_evaluation_result(key: str, value: bool):
-    print()
-    print(f"*** The {key} feature flag evaluates to {value}")
-
+# Experiment and flag keys
+egg_info_flag_key = "change-egg-data-string"
 
 # List of egg facts
 egg_facts = [
@@ -47,52 +43,53 @@ egg_jokes = [
     {"question": "What do you call an egg that's a great dancer?", "answer": "An egg-straordinary mover!"}
 ]
 
+@app.before_request
+def create_context():
+    pre_existing_dict = {
+        'key': str(uuid.uuid4()),
+        'kind': 'user',
+        'firstName': 'Sandy',
+    }
+    g.context = Context.from_dict(pre_existing_dict)
+    print(g.context)
+    
 @app.route("/")
 def home():
-    # Set up the evaluation context
-    context = Context.builder("example-user-key").kind("user").name("Sandy").build()
-
-    # Check the value of the feature flag
-    egg_info_flag_key_value = ldclient.get().variation(egg_info_flag_key, context, False)
+    # Use the context stored in g
+    egg_info_flag_value = ldclient.get().variation(egg_info_flag_key, g.context, False)
+    egg_info_flag_key_value = ldclient.get().variation(egg_info_flag_key, g.context, False)
+    print(f"*** The {egg_info_flag_key} feature flag evaluates to {egg_info_flag_value}")
 
     # Render different templates based on the flag value
-    # if true, share a joke
-    if egg_info_flag_key_value:
+    if egg_info_flag_key_value == "jokes":
         return render_template('jokes.html', jokes=egg_jokes)
-    # if false, share a fact
-    else:
+    elif egg_info_flag_key_value == "facts":
         return render_template('index.html', facts=egg_facts)
 
-if __name__ == "__main__":
-    if not sdk_key:
-        print("*** Please set the LAUNCHDARKLY_SDK_KEY env first")
-        exit()
-    if not egg_info_flag_key:
-        print("*** Please set the LAUNCHDARKLY_FLAG_KEY env first")
-        exit()
-
-    ldclient.set_config(Config(sdk_key))
-
-    if not ldclient.get().is_initialized():
-        print("*** SDK failed to initialize. Please check your internet connection and SDK credential for any typo.")
-        exit()
-
-    print("*** SDK successfully initialized")
-
-    # Set up the evaluation context. This context should appear on your
-    # LaunchDarkly contexts dashboard soon after you run the demo.
-    context = \
-        Context.builder('example-user-key').kind('user').name('Sandy').build()
-
-    # Check the value of the feature flag.
-    # check if the variable value names are correct
-
-    egg_info_flag_value = ldclient.get().variation(egg_info_flag_key, context, False)
-
-    show_evaluation_result(egg_info_flag_key, egg_info_flag_value)
+@app.route("/interaction", methods=['POST'])
+def track_interaction():
+    interaction_type = request.json.get('type', 'unknown')
+    # Use the context stored in g
+    ldclient.get().track("avg-button-clicks-to-facts", g.context)
+    print(g.context)
+    print(interaction_type)
+    print(request.json)
     
+    return {"status": "success"}
+
+if __name__ == '__main__':
+    # Initialize LaunchDarkly client
+    ldclient.set_config(Config(LAUNCHDARKLY_SDK_KEY))
+    
+    if not ldclient.get().is_initialized():
+        print('SDK failed to initialize')
+        exit()
+
+    print('SDK successfully initialized')
+        
     try:
         app.run(debug=True)
-        Event().wait()
-    except KeyboardInterrupt:
-        pass
+    except Exception as e:
+        print(f"*** Error: {e}")
+    finally:
+        ldclient.close()
