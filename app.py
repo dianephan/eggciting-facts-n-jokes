@@ -13,7 +13,7 @@ load_dotenv()
 LAUNCHDARKLY_SDK_KEY = os.getenv("LAUNCHDARKLY_SDK_KEY")
 
 # Experiment and flag keys
-egg_info_flag_key = "change-egg-data-string"
+egg_info_flag_key = "change-egg-data"
 
 # List of egg facts
 egg_facts = [
@@ -51,14 +51,13 @@ def create_context():
         'firstName': 'Sandy',
     }
     g.context = Context.from_dict(pre_existing_dict)
-    print(g.context)
+    # print(g.context)
     
 @app.route("/")
 def home():
     # Use the context stored in g
-    egg_info_flag_value = ldclient.get().variation(egg_info_flag_key, g.context, False)
     egg_info_flag_key_value = ldclient.get().variation(egg_info_flag_key, g.context, False)
-    print(f"*** The {egg_info_flag_key} feature flag evaluates to {egg_info_flag_value}")
+    print(f"*** The {egg_info_flag_key} feature flag evaluates to {egg_info_flag_key_value}")
 
     # Render different templates based on the flag value
     if egg_info_flag_key_value == "jokes":
@@ -68,19 +67,28 @@ def home():
 
 @app.route("/interaction", methods=['POST'])
 def track_interaction():
-    interaction_type = request.json.get('type', 'unknown')
-    # Use the context stored in g
-    ldclient.get().track("avg-button-clicks-to-facts", g.context)
+    # added metric value ? 
+    ldclient.get().track("avg-button-clicks-to-jokes", g.context, metric_value=1)
+    ldclient.get().track("clicks-to-find-funniest-joke", g.context)
+
     print(g.context)
-    print(interaction_type)
     print(request.json)
     
     return {"status": "success"}
 
 if __name__ == '__main__':
-    # Initialize LaunchDarkly client
-    ldclient.set_config(Config(LAUNCHDARKLY_SDK_KEY))
+    # Initialize LaunchDarkly client : public facing
+    # ldclient.set_config(Config(LAUNCHDARKLY_SDK_KEY))
+
     
+    ldclient.set_config(Config(
+        sdk_key=LAUNCHDARKLY_SDK_KEY,
+        base_uri='https://sdk-stg.launchdarkly.com',
+        events_uri='https://events-stg.launchdarkly.com',
+        stream_uri='https://stream-stg.launchdarkly.com'
+    ))
+
+
     if not ldclient.get().is_initialized():
         print('SDK failed to initialize')
         exit()
